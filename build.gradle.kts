@@ -57,6 +57,12 @@ task<JavaExec>("processPyExample") {
     classpath = sourceSets["main"].runtimeClasspath
 }
 
+task<JavaExec>("processMyExample") {
+    main = "astminer.examples.myExample.MyExample"
+    classpath = sourceSets["main"].runtimeClasspath
+}
+
+
 tasks.generateGrammarSource {
     maxHeapSize = "64m"
     arguments = arguments + listOf("-package", "me.vovak.antlr.parser")
