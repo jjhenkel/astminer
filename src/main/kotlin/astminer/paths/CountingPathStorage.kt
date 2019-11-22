@@ -8,7 +8,7 @@ const val DEFAULT_FRAGMENTS_PER_BATCH = 100L
 
 abstract class CountingPathStorage<LabelType>(
         private val outputFolderPath: String,
-        val batchMode: Boolean = true,
+        val batchMode: Boolean = false,
         val fragmentsPerBatch: Long = DEFAULT_FRAGMENTS_PER_BATCH) : PathStorage<LabelType> {
 
     private var contextsFileIndex = 0

@@ -3,7 +3,6 @@
 package astminer.examples.myExample
 
 import astminer.common.model.LabeledPathContexts
-import astminer.paths.CsvPathStorage
 import astminer.common.getNormalizedToken
 import astminer.common.model.*
 import astminer.common.preOrder
@@ -20,6 +19,7 @@ import astminer.paths.PathMiner
 import astminer.paths.PathRetrievalSettings
 import astminer.paths.toPathContext
 import java.io.File
+import astminer.parse.antlr.decompressTypeLabel
 
 // Retrieve paths from two Java projects for further usage in python example.
 fun processMyExampleData() {
@@ -29,9 +29,11 @@ fun processMyExampleData() {
 
     val miner = PathMiner(PathRetrievalSettings(8, 3))
 
-    val storage1 = CsvPathStorage("/analysis/output/fs/ast-paths/java")
+    val storage1 = Code2VecPathStorage("/analysis/output/fs/ast-paths/java")
     File(inputDir).walkTopDown().filter { it.isFile() && it.path.endsWith(".java") }.forEach { file ->
         val node = JavaParser().parse(file.inputStream()) ?: return@forEach
+
+
         val methods = JavaMethodSplitter().splitIntoMethods(node)
 
         methods.forEach { methodInfo ->
@@ -53,7 +55,7 @@ fun processMyExampleData() {
 
     storage1.save()
 
-    val storage2 = CsvPathStorage("/analysis/output/fs/ast-paths/python")
+    val storage2 = Code2VecPathStorage("/analysis/output/fs/ast-paths/python")
     File(inputDir).walkTopDown().filter { it.isFile() && it.path.endsWith(".py") }.forEach { file ->
         val node = PythonParser().parse(file.inputStream()) ?: return@forEach
         val methods = PythonMethodSplitter().splitIntoMethods(node)
@@ -77,7 +79,7 @@ fun processMyExampleData() {
 
     storage2.save()
 
-    val storage3 = CsvPathStorage("/analysis/output/fs/ast-paths/c-and-cpp")
+    val storage3 = Code2VecPathStorage("/analysis/output/fs/ast-paths/c-and-cpp")
     File(inputDir).walkTopDown().filter { 
         it.isFile() && (
             it.path.endsWith(".cpp") || 
