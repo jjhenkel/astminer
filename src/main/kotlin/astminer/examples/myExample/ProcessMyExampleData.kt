@@ -18,101 +18,88 @@ import astminer.paths.Code2VecPathStorage
 import astminer.paths.PathMiner
 import astminer.paths.PathRetrievalSettings
 import astminer.paths.toPathContext
-import java.io.File
 import astminer.parse.antlr.decompressTypeLabel
 
-// Retrieve paths from two Java projects for further usage in python example.
-fun processMyExampleData() {
-    val maxPathContexts = 500
+import com.beust.klaxon.Parser as KParser
+import com.beust.klaxon.JsonObject
+import java.io.File
+import java.io.BufferedReader;
+import java.io.FileInputStream;
+import java.io.InputStreamReader;
+import java.io.ByteArrayInputStream;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.Reader;
+import java.util.zip.GZIPInputStream;
 
-    val inputDir = "/analysis/inputs/public/source-code"
+// Retrieve paths from two Java projects for further usage in python example.
+fun processMyExampleData(inputPath: String) {
+    val maxPathContexts = 500
 
     val miner = PathMiner(PathRetrievalSettings(8, 3))
 
-    val storage1 = Code2VecPathStorage("/analysis/output/fs/ast-paths/java")
-    File(inputDir).walkTopDown().filter { it.isFile() && it.path.endsWith(".java") }.forEach { file ->
-        val node = JavaParser().parse(file.inputStream()) ?: return@forEach
+    val greader = BufferedReader(
+        InputStreamReader(
+            GZIPInputStream(
+                FileInputStream(inputPath))));
 
+    val storage1 = Code2VecPathStorage("/mnt/outputs/java")
+    val storage2 = Code2VecPathStorage("/mnt/outputs/python")
+    
+    greader.forEachLine { content -> 
+        val source = KParser.default().parse(StringBuilder(content)) as JsonObject
 
-        val methods = JavaMethodSplitter().splitIntoMethods(node)
+        if (source.string("language") == "java") {
 
-        methods.forEach { methodInfo ->
-            val methodNameNode = methodInfo.method.nameNode ?: return@forEach
-            val methodRoot = methodInfo.method.root
-            val label = splitToSubtokens(methodNameNode.getToken()).joinToString("|")
-            methodRoot.preOrder().forEach { it.setNormalizedToken() }
-            methodNameNode.setNormalizedToken("METHOD_NAME")
+            val node = JavaParser().parse(ByteArrayInputStream((source.string("source_code") ?: "").toByteArray(Charsets.UTF_8))) ?: return@forEachLine
+            val methods = JavaMethodSplitter().splitIntoMethods(node)
 
-            // Retrieve paths from every node individually
-            val paths = miner.retrievePaths(methodRoot).take(maxPathContexts)
-            storage1.store(LabeledPathContexts(label, paths.map {
-                toPathContext(it) { node ->
-                    node.getNormalizedToken()
-                }
-            }))
+            methods.forEach { methodInfo ->
+                val methodNameNode = methodInfo.method.nameNode ?: return@forEach
+                val methodRoot = methodInfo.method.root
+                val label = splitToSubtokens(methodNameNode.getToken()).joinToString("|")
+                methodRoot.preOrder().forEach { it.setNormalizedToken() }
+                methodNameNode.setNormalizedToken("METHOD_NAME")
+
+                // Retrieve paths from every node individually
+                val paths = miner.retrievePaths(methodRoot).take(maxPathContexts)
+                storage1.store(LabeledPathContexts(label, paths.map {
+                    toPathContext(it) { node ->
+                        node.getNormalizedToken()
+                    }
+                }))
+            }
+        }
+
+        else if (source.string("language") == "python") {
+
+            val node = PythonParser().parse(ByteArrayInputStream((source.string("source_code") ?: "").toByteArray(Charsets.UTF_8))) ?: return@forEachLine
+            val methods = PythonMethodSplitter().splitIntoMethods(node)
+
+            methods.forEach { methodInfo ->
+                val methodNameNode = methodInfo.method.nameNode ?: return@forEach
+                val methodRoot = methodInfo.method.root
+                val label = splitToSubtokens(methodNameNode.getToken()).joinToString("|")
+                methodRoot.preOrder().forEach { it.setNormalizedToken() }
+                methodNameNode.setNormalizedToken("METHOD_NAME")
+
+                // Retrieve paths from every node individually
+                val paths = miner.retrievePaths(methodRoot).take(maxPathContexts)
+                storage2.store(LabeledPathContexts(label, paths.map {
+                    toPathContext(it) { node ->
+                        node.getNormalizedToken()
+                    }
+                }))
+            }
         }
     }
 
     storage1.save()
-
-    val storage2 = Code2VecPathStorage("/analysis/output/fs/ast-paths/python")
-    File(inputDir).walkTopDown().filter { it.isFile() && it.path.endsWith(".py") }.forEach { file ->
-        val node = PythonParser().parse(file.inputStream()) ?: return@forEach
-        val methods = PythonMethodSplitter().splitIntoMethods(node)
-
-        methods.forEach { methodInfo ->
-            val methodNameNode = methodInfo.method.nameNode ?: return@forEach
-            val methodRoot = methodInfo.method.root
-            val label = splitToSubtokens(methodNameNode.getToken()).joinToString("|")
-            methodRoot.preOrder().forEach { it.setNormalizedToken() }
-            methodNameNode.setNormalizedToken("METHOD_NAME")
-
-            // Retrieve paths from every node individually
-            val paths = miner.retrievePaths(methodRoot).take(maxPathContexts)
-            storage2.store(LabeledPathContexts(label, paths.map {
-                toPathContext(it) { node ->
-                    node.getNormalizedToken()
-                }
-            }))
-        }
-    }
-
     storage2.save()
-
-    val storage3 = Code2VecPathStorage("/analysis/output/fs/ast-paths/c-and-cpp")
-    File(inputDir).walkTopDown().filter { 
-        it.isFile() && (
-            it.path.endsWith(".cpp") || 
-            it.path.endsWith(".c") || 
-            it.path.endsWith(".cc") || 
-            it.path.endsWith(".cxx") || 
-            it.path.endsWith(".h") || 
-            it.path.endsWith(".hpp")
-        ) 
-    }.forEach { file ->
-        val node = FuzzyCppParser().parse(file.inputStream()) ?: return@forEach
-        val methods = FuzzyMethodSplitter().splitIntoMethods(node)
-
-        methods.forEach { methodInfo ->
-            val methodNameNode = methodInfo.method.nameNode ?: return@forEach
-            val methodRoot = methodInfo.method.root
-            val label = splitToSubtokens(methodNameNode.getToken()).joinToString("|")
-            methodRoot.preOrder().forEach { it.setNormalizedToken() }
-            methodNameNode.setNormalizedToken("METHOD_NAME")
-
-            // Retrieve paths from every node individually
-            val paths = miner.retrievePaths(methodRoot).take(maxPathContexts)
-            storage3.store(LabeledPathContexts(label, paths.map {
-                toPathContext(it) { node ->
-                    node.getNormalizedToken()
-                }
-            }))
-        }
-    }
-
-    storage3.save()
 }
 
 fun main(args: Array<String>) {
-    processMyExampleData()
+    if (args.size > 0) {
+        processMyExampleData(args[0])
+    }
 }

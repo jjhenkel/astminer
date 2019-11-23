@@ -32,6 +32,7 @@ val generatedSourcesPath = "src/main/generated"
 dependencies {
     antlr("org.antlr:antlr4:4.7.1")
     implementation(kotlin("stdlib"))
+    implementation("com.beust:klaxon:5.0.1")
 
     // https://mvnrepository.com/artifact/com.github.gumtreediff
     api("com.github.gumtreediff", "core", "2.1.0")
