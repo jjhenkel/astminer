@@ -43,8 +43,8 @@ fun processMyExampleData(inputPath: String) {
             GZIPInputStream(
                 FileInputStream(inputPath))));
 
-    val storage1 = Code2VecPathStorage("/mnt/outputs/java")
-    val storage2 = Code2VecPathStorage("/mnt/outputs/python")
+    val storage1 = Code2VecPathStorage("/tmp/java")
+    val storage2 = Code2VecPathStorage("/tmp/python")
     
     greader.forEachLine { content -> 
         val source = KParser.default().parse(StringBuilder(content)) as JsonObject
