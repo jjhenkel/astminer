@@ -45,7 +45,7 @@ fun processMyExampleData(inputPath: String) {
 
     val storage1 = Code2VecPathStorage("/tmp/java")
     val storage2 = Code2VecPathStorage("/tmp/python")
-    
+
     greader.forEachLine { content -> 
         val source = KParser.default().parse(StringBuilder(content)) as JsonObject
 
