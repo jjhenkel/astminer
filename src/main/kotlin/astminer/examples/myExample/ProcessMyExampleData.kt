@@ -33,8 +33,8 @@ import java.io.Reader;
 import java.util.zip.GZIPInputStream;
 
 // Retrieve paths from two Java projects for further usage in python example.
-fun processMyExampleData(inputPath: String) {
-    val maxPathContexts = 500
+fun processMyExampleData(inputPath: String, maxContexts: String) {
+    val maxPathContexts = maxContexts.toInt()
 
     val miner = PathMiner(PathRetrievalSettings(8, 3))
 
@@ -99,7 +99,7 @@ fun processMyExampleData(inputPath: String) {
 }
 
 fun main(args: Array<String>) {
-    if (args.size > 0) {
-        processMyExampleData(args[0])
+    if (args.size > 1) {
+        processMyExampleData(args[0], args[1])
     }
 }
